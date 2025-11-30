@@ -1,6 +1,4 @@
-import NxWelcome from './nx-welcome';
 import { usePostHog } from 'posthog-js/react';
-import { Route, Routes, Link } from 'react-router-dom';
 
 export function App() {
   const posthog = usePostHog();
@@ -9,52 +7,35 @@ export function App() {
     posthog?.capture('feature_used');
   };
 
-  return (
-    <div>
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleFeatureClick}>
-          Simulate Feature Usage
-        </button>
-      </div>
-      
-      <NxWelcome title="@data-engineer-fullstack-test/web" />
+  const handleGenerationFailure = () => {
+    // simulate a generation failure with training data
+    posthog?.capture('generation_failed', {
+      failure_reason: 'timeout',
+      input_prompt: 'generate a marketing email for new users',
+    });
+  };
 
-      {/* START: routes */}
-      {/* These routes and navigation have been generated for you */}
-      {/* Feel free to move and update them to fit your needs */}
-      <br />
-      <hr />
-      <br />
-      <div role="navigation">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/page-2">Page 2</Link>
-          </li>
-        </ul>
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold mb-6">Event Simulator</h1>
+        
+        <div className="space-y-4">
+          <button
+            onClick={handleFeatureClick}
+            className="w-full bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600"
+          >
+            Simulate Feature Usage
+          </button>
+
+          <button
+            onClick={handleGenerationFailure}
+            className="w-full bg-red-500 text-white px-6 py-3 rounded hover:bg-red-600"
+          >
+            Simulate Generation Failure
+          </button>
+        </div>
       </div>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <div>
-              This is the generated root route.{' '}
-              <Link to="/page-2">Click here for page 2.</Link>
-            </div>
-          }
-        />
-        <Route
-          path="/page-2"
-          element={
-            <div>
-              <Link to="/">Click here to go back to root page.</Link>
-            </div>
-          }
-        />
-      </Routes>
-      {/* END: routes */}
     </div>
   );
 }
