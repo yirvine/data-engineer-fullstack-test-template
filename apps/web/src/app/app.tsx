@@ -1,10 +1,22 @@
 import NxWelcome from './nx-welcome';
-
+import { usePostHog } from 'posthog-js/react';
 import { Route, Routes, Link } from 'react-router-dom';
 
 export function App() {
+  const posthog = usePostHog();
+
+  const handleFeatureClick = () => {
+    posthog?.capture('feature_used');
+  };
+
   return (
     <div>
+      <div style={{ padding: '20px' }}>
+        <button onClick={handleFeatureClick}>
+          Simulate Feature Usage
+        </button>
+      </div>
+      
       <NxWelcome title="@data-engineer-fullstack-test/web" />
 
       {/* START: routes */}
