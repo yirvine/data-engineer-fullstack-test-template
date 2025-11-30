@@ -1,101 +1,143 @@
-# DataEngineerFullstackTest
+# Analytics Pipeline & Data Engineering Assignment
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+This project demonstrates an event-driven architecture where a React frontend emits events to PostHog, which routes them to a NestJS backend for processing. The system collects training data for AI models while keeping business logic decoupled from the application layer.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Architecture Overview
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/react-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+The system has three main components:
 
-## Run tasks
+1. **React App** (`apps/web`) - emits user interaction events to PostHog
+2. **PostHog** - central event router that handles webhooks and workflow triggers
+3. **NestJS API** (`apps/api`) - processes events and stores training data
 
-To run the dev server for your app, use:
+Events flow like this: Browser -> PostHog -> Webhook -> NestJS -> training_data.jsonl
 
-```sh
+## Prerequisites
+
+- Node.js 20.x (the project uses Vite 7 which requires this version)
+- pnpm package manager
+- PostHog account (free tier works fine)
+- A tunnel service for local development (we use Pinggy)
+
+## Setup Instructions
+
+### 1. Install dependencies
+
+```bash
+pnpm install
+```
+
+### 2. Configure PostHog
+
+Create `apps/web/.env.local`:
+
+```
+VITE_POSTHOG_KEY=your_posthog_project_key
+VITE_POSTHOG_HOST=https://us.i.posthog.com
+```
+
+### 3. Start the tunnel
+
+In a separate terminal, expose your local API:
+
+```bash
+ssh -p 443 -R0:localhost:3000 qr@free.pinggy.io
+```
+
+This generates a public URL like `https://random-name.free.pinggy.link`. Note that the free tier expires after 60 minutes and generates a new URL each time you restart.
+
+### 4. Run the applications
+
+Terminal 1 - API server:
+```bash
+npx nx serve api
+```
+
+Terminal 2 - React app:
+```bash
 npx nx serve web
 ```
 
-To create a production bundle:
+The API runs on `http://localhost:3000/api` and the web app on `http://localhost:4200`.
 
-```sh
-npx nx build web
+## PostHog Configuration
+
+### Webhook for Training Data
+
+1. Go to PostHog -> Data Pipeline -> Destinations
+2. Create a new HTTP Webhook
+3. URL: `https://your-tunnel-url.free.pinggy.link/api/webhooks`
+4. Add event matcher: `event name equals generation_failed`
+5. Enable the destination
+
+This forwards all generation failure events to the NestJS backend, which sanitizes the data and appends it to `training_data.jsonl`.
+
+### Marketing Workflow
+
+For the 5th feature usage discount email:
+
+1. Created a cohort called "power users" with condition: user has triggered `feature_used` event at least 5 times
+2. Set up a workflow triggered by `feature_used` events
+3. Workflow runs once per user and includes:
+   - 2 minute wait period
+   - Condition check: is user in "power users" cohort?
+   - If yes: send discount email
+   - If no: exit workflow
+
+The workflow uses a custom email service (configured with my personal DNS) to deliver the discount code.
+
+## Project Structure
+
+```
+apps/
+├── web/                    # React frontend
+│   ├── src/app/app.tsx    # main UI with event buttons
+│   └── src/main.tsx       # PostHog provider setup
+└── api/                    # NestJS backend
+    └── src/app/
+        ├── webhooks.controller.ts   # receives PostHog webhooks
+        └── webhooks.service.ts      # processes events and writes data
 ```
 
-To see all available targets to run for a project, run:
+## How It Works
 
-```sh
-npx nx show project web
+### Frontend Events
+
+The React app has two buttons:
+- "Simulate Feature Usage" - fires a `feature_used` event
+- "Simulate Generation Failure" - fires a `generation_failed` event with training data payload
+
+Events go directly from the browser to PostHog's servers.
+
+### Data Pipeline
+
+When a `generation_failed` event occurs:
+1. PostHog receives it from the browser
+2. Webhook destination forwards it to NestJS API
+3. Service extracts and sanitizes the `input_prompt` field
+4. Data is appended to `training_data.jsonl` in JSON Lines format
+5. File writes use async operations to avoid blocking
+
+### Training Data Format
+
+Each line in `training_data.jsonl` is a complete JSON object:
+
+```json
+{"timestamp":"2025-11-30T16:38:21.968Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"generate a marketing email for new users","distinct_id":"019ad56c-5168-7457-bac6-82981da45fb3"}
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+This format makes it easy to stream and process for ML training pipelines.
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Technical Notes
 
-## Add new projects
+- Disabled the `@nx/vitest` plugin in `nx.json` due to ES Module compatibility issues with Nx 22.1.2
+- Used pnpm instead of npm since the workspace is configured as a pnpm monorepo
+- PostHog webhook payload wraps event data in an outer object, so the service handles both direct and wrapped formats
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+## Testing
 
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/react:app demo
-```
-
-To generate a new library, use:
-
-```sh
-npx nx g @nx/react:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/react-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+1. Open `http://localhost:4200`
+2. Click "Simulate Generation Failure" a few times
+3. Check that `training_data.jsonl` gets created with new entries
+4. Click "Simulate Feature Usage" 5 times (in same session)
+5. After 2 minutes, check for discount email delivery
