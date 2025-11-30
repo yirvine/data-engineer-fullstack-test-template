@@ -9,20 +9,29 @@ interface PostHogWebhook {
   timestamp?: string;
 }
 
+interface PostHogWebhookWrapper {
+  event?: PostHogWebhook;
+}
+
 @Injectable()
 export class WebhooksService {
   private readonly trainingDataFile = join(process.cwd(), 'training_data.jsonl');
 
-  async handlePostHogEvent(payload: PostHogWebhook) {
-    const event = payload.event;
+  async handlePostHogEvent(payload: PostHogWebhook | PostHogWebhookWrapper) {
+    // handle both direct format (curl) and PostHog wrapped format
+    const eventData = 'event' in payload && typeof payload.event === 'object' 
+      ? payload.event 
+      : payload as PostHogWebhook;
+    
+    const eventName = eventData.event;
 
     // handle generation_failed events for training data
-    if (event === 'generation_failed') {
-      await this.saveTrainingData(payload);
+    if (eventName === 'generation_failed') {
+      await this.saveTrainingData(eventData);
     }
 
     // could add marketing handler here if needed
-    // if (event === 'feature_used') { ... }
+    // if (eventName === 'feature_used') { ... }
   }
 
   private async saveTrainingData(payload: PostHogWebhook) {

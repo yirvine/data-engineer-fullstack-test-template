@@ -1,1 +1,3 @@
 {"timestamp":"2025-11-30T16:19:54.004Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"test prompt"}
+{"timestamp":"2025-11-30T16:32:43.084Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"test via curl"}
+{"timestamp":"2025-11-30T16:38:21.968Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"generate a marketing email for new users","distinct_id":"019ad56c-5168-7457-bac6-82981da45fb3"}
