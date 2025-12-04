@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 
 export function App() {
   const posthog = usePostHog();
-  const [featureCount, setFeatureCount] = useState(0);
+  const [featureCount, setFeatureCount] = useState(() => {
+    const stored = localStorage.getItem('featureCount');
+    return stored ? parseInt(stored, 10) : 0;
+  });
   const [lastClicked, setLastClicked] = useState<'feature' | 'generation' | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -51,6 +54,7 @@ export function App() {
   const handleFeatureClick = () => {
     const newCount = featureCount + 1;
     setFeatureCount(newCount);
+    localStorage.setItem('featureCount', String(newCount));
     
     // Frontend reports the count, PostHog decides what to do with it
     posthog?.capture('feature_used', {

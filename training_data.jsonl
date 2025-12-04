@@ -3,3 +3,5 @@
 {"timestamp":"2025-11-30T16:38:21.968Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"generate a marketing email for new users","distinct_id":"019ad56c-5168-7457-bac6-82981da45fb3"}
 {"timestamp":"2025-12-03T01:51:55.499Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"generate a marketing email for new users","distinct_id":"af7c2aba-97f7-4860-99dd-cebb3f18bdf7"}
 {"timestamp":"2025-12-03T01:56:04.099Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"hello this is going to fail!","distinct_id":"af7c2aba-97f7-4860-99dd-cebb3f18bdf7"}
+{"timestamp":"2025-12-04T03:48:07.547Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"here is my bad input","distinct_id":"c8003fe5-4ab8-4353-94f2-120269be2159"}
+{"timestamp":"2025-12-04T04:01:46.064Z","event":"generation_failed","failure_reason":"timeout","input_prompt":"THIS DID NOT WORK!","distinct_id":"ac7aa07e-a11e-4fa0-af91-c2bc152b9734"}
