@@ -18,6 +18,12 @@ root.render(
       apiKey={posthogKey}
       options={{
         api_host: posthogHost,
+        // Disable heavy features we don't need
+        disable_session_recording: true,
+        disable_surveys: true,
+        autocapture: false, // Only capture explicit events
+        capture_pageview: true,
+        capture_pageleave: true,
       }}
     >
       <BrowserRouter>
